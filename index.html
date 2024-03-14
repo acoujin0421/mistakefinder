@@ -1,73 +1,67 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>오입력 파인더</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; }
-  .input-group { margin-bottom: 10px; }
-  #results { margin-top: 20px; }
-</style>
+    <title>오입력 파인더</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        input, button {
+            margin: 10px;
+        }
+    </style>
 </head>
 <body>
-<h2>오입력 파인더</h2>
+    <h2>오입력 파인더</h2>
+    <input type="file" id="file1" accept=".csv">
+    <input type="file" id="file2" accept=".csv">
+    <button onclick="compareFiles()">비교 시작</button>
+    <div id="result"></div>
 
-<div class="input-group">
-  <label for="file1">CSV 파일 1:</label>
-  <input type="file" id="file1" accept=".csv">
-</div>
-
-<div class="input-group">
-  <label for="file2">CSV 파일 2:</label>
-  <input type="file" id="file2" accept=".csv">
-</div>
-
-<button onclick="compareFiles()">비교하기</button>
-
-<div id="results"></div>
-
-<script>
-  function readFile(file, callback) {
-    const reader = new FileReader();
-    reader.onload = () => callback(reader.result);
-    reader.readAsText(file);
-  }
-
-  function parseCSV(text) {
-    return text.split('\n').map(row => row.split(','));
-  }
-
-  function compareArrays(arr1, arr2) {
-    const differences = [];
-    arr1.forEach((row, rowIndex) => {
-      row.forEach((cell, cellIndex) => {
-        if (arr2[rowIndex] && cell !== arr2[rowIndex][cellIndex]) {
-          differences.push(`[${rowIndex + 1}, ${cellIndex + 1}]`);
+    <script>
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
         }
-      });
-    });
-    return differences;
-  }
 
-  function compareFiles() {
-    const file1 = document.getElementById('file1').files[0];
-    const file2 = document.getElementById('file2').files[0];
-    if (!file1 || !file2) {
-      alert('두 개의 CSV 파일을 선택해주세요.');
-      return;
-    }
+        async function compareFiles() {
+            const fileInput1 = document.getElementById('file1');
+            const fileInput2 = document.getElementById('file2');
+            const resultDiv = document.getElementById('result');
 
-    readFile(file1, content1 => {
-      readFile(file2, content2 => {
-        const csv1 = parseCSV(content1);
-        const csv2 = parseCSV(content2);
-        const differences = compareArrays(csv1, csv2);
-        document.getElementById('results').innerHTML = differences.length ?
-          `차이가 있는 셀 좌표: ${differences.join(', ')}` :
-          '두 파일은 동일합니다.';
-      });
-    });
-  }
-</script>
+            if (!fileInput1.files.length || !fileInput2.files.length) {
+                resultDiv.innerHTML = "두 개의 파일을 모두 선택해주세요.";
+                return;
+            }
+
+            try {
+                const fileContent1 = await readFile(fileInput1.files[0]);
+                const fileContent2 = await readFile(fileInput2.files[0]);
+
+                const rows1 = fileContent1.split('\n');
+                const rows2 = fileContent2.split('\n');
+
+                let differences = '';
+                rows1.forEach((row, rowIndex) => {
+                    const cells1 = row.split(',');
+                    const cells2 = rows2[rowIndex].split(',');
+                    cells1.forEach((cell, cellIndex) => {
+                        if (cell !== cells2[cellIndex]) {
+                            const cellPosition = `열 ${String.fromCharCode(65 + cellIndex)} 행 ${rowIndex + 1}`;
+                            differences += `<div>다른 값 발견: ${cellPosition} (${cell} vs ${cells2[cellIndex]})</div>`;
+                        }
+                    });
+                });
+
+                resultDiv.innerHTML = differences || '모든 값이 일치합니다!';
+            } catch (error) {
+                resultDiv.innerHTML = "파일을 읽는 중 오류가 발생했습니다.";
+            }
+        }
+    </script>
 </body>
 </html>
