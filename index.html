@@ -1,97 +1,110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>오입력 파인더</title>
 <style>
-    body {
-        font-family: 'Arial', sans-serif;
-        background-color: #f3f3f9;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .input-container {
-        margin-bottom: 20px;
-    }
-    #result {
-        margin-top: 20px;
-        color: #333;
-    }
-    .button {
-        background-color: #89CFF0;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 12px;
-    }
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f3f4f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  .input-field {
+    margin: 15px 0;
+  }
+  .button {
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
+  .result {
+    margin-top: 20px;
+    text-align: left;
+  }
 </style>
 </head>
 <body>
-<h2>오입력 파인더</h2>
-<div class="input-container">
+<div class="container">
+  <h2>오입력 파인더</h2>
+  <div class="input-field">
     <input type="file" id="file1" accept=".csv">
+    <label for="file1">CSV 파일 1</label>
+  </div>
+  <div class="input-field">
     <input type="file" id="file2" accept=".csv">
-    <button class="button" onclick="compareFiles()">비교하기</button>
+    <label for="file2">CSV 파일 2</label>
+  </div>
+  <button class="button" onclick="compareFiles()">비교하기</button>
+  <div id="result" class="result"></div>
 </div>
-<div id="result"></div>
 
 <script>
-    function parseCSV(text) {
-        const rows = text.split('\n');
-        return rows.map(row => row.split(','));
-    }
+function compareFiles() {
+  const file1 = document.getElementById('file1').files[0];
+  const file2 = document.getElementById('file2').files[0];
+  if (!file1 || !file2) {
+    alert('두 CSV 파일을 모두 업로드해주세요.');
+    return;
+  }
 
-    function compareFiles() {
-        const file1 = document.getElementById('file1').files[0];
-        const file2 = document.getElementById('file2').files[0];
-        if (!file1 || !file2) {
-            alert('두 개의 CSV 파일을 선택해주세요.');
-            return;
-        }
+  const reader1 = new FileReader();
+  const reader2 = new FileReader();
+  reader1.onload = (e) => {
+    const content1 = e.target.result;
+    reader2.onload = (e) => {
+      const content2 = e.target.result;
+      const differences = findDifferences(content1, content2);
+      displayDifferences(differences);
+    };
+    reader2.readAsText(file2);
+  };
+  reader1.readAsText(file1);
+}
 
-        const reader1 = new FileReader();
-        const reader2 = new FileReader();
+function findDifferences(content1, content2) {
+  const rows1 = content1.split('\n');
+  const rows2 = content2.split('\n');
+  const differences = [];
 
-        reader1.onload = function(e) {
-            const content1 = e.target.result;
-            reader2.onload = function(e) {
-                const content2 = e.target.result;
+  rows1.forEach((row, rowIndex) => {
+    const cells1 = row.split(',');
+    const cells2 = rows2[rowIndex].split(',');
+    cells1.forEach((cell, cellIndex) => {
+      if (cell !== cells2[cellIndex]) {
+        differences.push(`[${String.fromCharCode(65 + cellIndex)}열, ${rowIndex + 1}행] 값이 서로 다릅니다.`);
+      }
+    });
+  });
 
-                const data1 = parseCSV(content1);
-                const data2 = parseCSV(content2);
-                const resultElement = document.getElementById('result');
-                resultElement.innerHTML = '';
+  return differences;
+}
 
-                let differencesFound = false;
-                data1.forEach((row, rowIndex) => {
-                    row.forEach((cell, cellIndex) => {
-                        if (data2[rowIndex] && cell !== data2[rowIndex][cellIndex]) {
-                            differencesFound = true;
-                            const cellName = `[열 ${String.fromCharCode(65 + cellIndex)}행 ${rowIndex + 1}] 값이 서로 다릅니다.`;
-                            const p = document.createElement('p');
-                            p.textContent = cellName;
-                            resultElement.appendChild(p);
-                        }
-                    });
-                });
-
-                if (!differencesFound) {
-                    resultElement.innerHTML = '<p>모든 셀의 값이 일치합니다.</p>';
-                }
-            };
-            reader2.readAsText(file2);
-        };
-        reader1.readAsText(file1);
-    }
+function displayDifferences(differences) {
+  const resultDiv = document.getElementById('result');
+  if (differences.length === 0) {
+    resultDiv.innerHTML = '<p>모든 데이터가 일치합니다.</p>';
+  } else {
+    resultDiv.innerHTML = '<p>두 파일에서 서로 다른 값의 셀을 찾아드렸습니다:</p><ul>' + differences.map(d => `<li>${d}</li>`).join('') + '</ul>';
+  }
+}
 </script>
 </body>
 </html>
