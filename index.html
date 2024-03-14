@@ -1,67 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>오입력 파인더</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        input, button {
-            margin: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오입력 파인더</title>
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f3f3f9;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .input-container {
+        margin-bottom: 20px;
+    }
+    #result {
+        margin-top: 20px;
+        color: #333;
+    }
+    .button {
+        background-color: #89CFF0;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 12px;
+    }
+</style>
 </head>
 <body>
-    <h2>오입력 파인더</h2>
+<h2>오입력 파인더</h2>
+<div class="input-container">
     <input type="file" id="file1" accept=".csv">
     <input type="file" id="file2" accept=".csv">
-    <button onclick="compareFiles()">비교 시작</button>
-    <div id="result"></div>
+    <button class="button" onclick="compareFiles()">비교하기</button>
+</div>
+<div id="result"></div>
 
-    <script>
-        function readFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
+<script>
+    function parseCSV(text) {
+        const rows = text.split('\n');
+        return rows.map(row => row.split(','));
+    }
+
+    function compareFiles() {
+        const file1 = document.getElementById('file1').files[0];
+        const file2 = document.getElementById('file2').files[0];
+        if (!file1 || !file2) {
+            alert('두 개의 CSV 파일을 선택해주세요.');
+            return;
         }
 
-        async function compareFiles() {
-            const fileInput1 = document.getElementById('file1');
-            const fileInput2 = document.getElementById('file2');
-            const resultDiv = document.getElementById('result');
+        const reader1 = new FileReader();
+        const reader2 = new FileReader();
 
-            if (!fileInput1.files.length || !fileInput2.files.length) {
-                resultDiv.innerHTML = "두 개의 파일을 모두 선택해주세요.";
-                return;
-            }
+        reader1.onload = function(e) {
+            const content1 = e.target.result;
+            reader2.onload = function(e) {
+                const content2 = e.target.result;
 
-            try {
-                const fileContent1 = await readFile(fileInput1.files[0]);
-                const fileContent2 = await readFile(fileInput2.files[0]);
+                const data1 = parseCSV(content1);
+                const data2 = parseCSV(content2);
+                const resultElement = document.getElementById('result');
+                resultElement.innerHTML = '';
 
-                const rows1 = fileContent1.split('\n');
-                const rows2 = fileContent2.split('\n');
-
-                let differences = '';
-                rows1.forEach((row, rowIndex) => {
-                    const cells1 = row.split(',');
-                    const cells2 = rows2[rowIndex].split(',');
-                    cells1.forEach((cell, cellIndex) => {
-                        if (cell !== cells2[cellIndex]) {
-                            const cellPosition = `열 ${String.fromCharCode(65 + cellIndex)} 행 ${rowIndex + 1}`;
-                            differences += `<div>다른 값 발견: ${cellPosition} (${cell} vs ${cells2[cellIndex]})</div>`;
+                let differencesFound = false;
+                data1.forEach((row, rowIndex) => {
+                    row.forEach((cell, cellIndex) => {
+                        if (data2[rowIndex] && cell !== data2[rowIndex][cellIndex]) {
+                            differencesFound = true;
+                            const cellName = `[열 ${String.fromCharCode(65 + cellIndex)}행 ${rowIndex + 1}] 값이 서로 다릅니다.`;
+                            const p = document.createElement('p');
+                            p.textContent = cellName;
+                            resultElement.appendChild(p);
                         }
                     });
                 });
 
-                resultDiv.innerHTML = differences || '모든 값이 일치합니다!';
-            } catch (error) {
-                resultDiv.innerHTML = "파일을 읽는 중 오류가 발생했습니다.";
-            }
-        }
-    </script>
+                if (!differencesFound) {
+                    resultElement.innerHTML = '<p>모든 셀의 값이 일치합니다.</p>';
+                }
+            };
+            reader2.readAsText(file2);
+        };
+        reader1.readAsText(file1);
+    }
+</script>
 </body>
 </html>
